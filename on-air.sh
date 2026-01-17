@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # On Air v1.0.0
-# https://github.com/UtkarshJain98/OnAir
+# https://github.com/yourusername/on-air
 #
 # Automatic "on air" busy light for macOS.
 # Turns on a HomeKit/Matter smart switch when your camera or microphone
@@ -152,7 +152,8 @@ load_state() {
 run_shortcut() {
     local shortcut_name="$1"
     # Use AppleScript for better reliability with HomeKit shortcuts
-    osascript -e "tell application \"Shortcuts Events\" to run shortcut \"$shortcut_name\"" 2>/dev/null
+    # Redirect stdout to suppress "missing value" return
+    osascript -e "tell application \"Shortcuts Events\" to run shortcut \"$shortcut_name\"" >/dev/null 2>&1
 }
 
 update_light() {
@@ -399,9 +400,19 @@ install_agent() {
 
     echo "Starting On Air..."
     if launchctl load -w "$PLIST_PATH"; then
-        sleep 2
+        # Wait for service to start (retry a few times)
+        local retries=5
+        local started=false
+        while [[ $retries -gt 0 ]]; do
+            sleep 1
+            if launchctl list 2>/dev/null | grep -q "$PLIST_NAME"; then
+                started=true
+                break
+            fi
+            retries=$((retries - 1))
+        done
 
-        if launchctl list | grep -q "$PLIST_NAME"; then
+        if [[ "$started" == "true" ]]; then
             echo ""
             echo "============================================"
             echo " Installation complete!"
@@ -544,7 +555,7 @@ Logs:
     $LOG_FILE
 
 Documentation:
-    https://github.com/UtkarshJain98/OnAir
+    https://github.com/yourusername/on-air
 
 EOF
 }
